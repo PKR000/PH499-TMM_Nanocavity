@@ -7,48 +7,53 @@ import tmm
 import tmm.examples
 import matplotlib.pyplot as plt
 
-#index of refraction; we would like to have some continuous function describing the complex nk values.
-#if not possible, import data bases
 
-inf = "inf"
-
-#basic read-in function to grab material properties (but I dont like pandas DataFrames so convert to np arrays)
+#basic read-in function to grab material properties
 #the CSV files have the form lambda(.001nm), N, iK
 try:
     SiO2_data = pd.read_csv("SiO2 for sensitivity.csv")
     Ag_data = pd.read_csv("Ag for sensitivity.csv")
+    Al_data = pd.read_csv("Al for sensitivity.csv")
 except FileNotFoundError:
     print("File not found.")
 
+#converting pandas DataFrame to numpy array of floats
 SiO2_data = SiO2_data.to_numpy(float)
 Ag_data = Ag_data.to_numpy(float)
-print(SiO2_data)
+Al_data = Al_data.to_numpy(float)
+print(SiO2_data)  #testing to check data, can remove later
 print(Ag_data)
+print(Al_data)
 
 
 #main function
 def Calculate():
-    
+    inf = "inf"
     d_top = 35 #nm, top layer thickness
-    d_mid = 125 #nm, test number
+    d_mid = 125 #nm, Middle layer
 
-    #index of refraction of material: wavelength in nm versus index. This is for read-in files.
+    #index of refraction of material
     #interpolates data into continuous function.
-    material_nk_mid = SiO2_data    #test array
+
+    material_nk_top = Ag_data    #test array 1
+    material_nk_fn_top = interp1d((material_nk_top[:,0]*1000),
+                              material_nk_top[:,1] + material_nk_top[:,2]*1j, kind='quadratic')
+
+    material_nk_mid = SiO2_data    #test array 2
     material_nk_fn_mid = interp1d((material_nk_mid[:,0]*1000),
                               material_nk_mid[:,1] + material_nk_mid[:,2]*1j, kind='quadratic')
 
-    material_nk_top = Ag_data    #test array
-    material_nk_fn_top = interp1d((material_nk_mid[:,0]*1000),
-                              material_nk_mid[:,1] + material_nk_top[:,2]*1j, kind='quadratic')
+    material_nk_bot = SiO2_data    #test array 3
+    material_nk_fn_bot = interp1d((material_nk_bot[:,0]*1000),
+                              material_nk_bot[:,1] + material_nk_bot[:,2]*1j, kind='quadratic')
 
-    #d_list is thickness of materials, lambda_list is 
-    d_list = [inf,d_top, d_mid, inf] #in nm
-    lambda_list = np.linspace(380, 800, 400) #in nm, this returns array of z evenly spaced numbers from x to y.
+    #d_list is thickness of materials
+    d_list = [inf,d_top, d_mid, inf] #in nm, top and bottom must be inf
+    lambda_list = np.linspace(400, 800, 400) #in nm, this returns array of z evenly spaced numbers from x to y.
     T_list = []
     
-    for lambda_vac in lambda_list:
-        n_list = [1,material_nk_fn_top(lambda_vac) , material_nk_fn_mid(lambda_vac), 1]  #for each wavelength, solve material function and add to an N list
+    for lambda_vac in lambda_list: #for each wavelength, solve material function and add to an N list
+        n_list = [1,material_nk_fn_top(lambda_vac), material_nk_fn_mid(lambda_vac), material_nk_fn_bot(lambda_vac)]
         T_list.append(tmm.coh_tmm('s', n_list, d_list, 0, lambda_vac)['R'])
     
     plt.figure()
@@ -60,38 +65,3 @@ def Calculate():
 
 Calculate()
 
-#_______________notes below______________________
-
-#--To simulate a Fabry-Perot Nanocavity(FPN) analytically using Transfer Matrix Method(TMM)--
- 
-#assuming some structure of X interfaces and mediums we can collapse all the interactions into one transfer matrix describing energy in and out from either side of the surface.
-#simplifying the TMM results in equations:
-
-#eq.1:  E_in = M[0,0] * E_trans
-#eq.2:  E_refl = M[1,0] * E_trans
-
-#eq.1 yields the total transmission of our structure written as E_trans/E_in = 1/M[0,0]
-
-#we can plug this into eq.2 to get a relation of the reflected wave and input wave
-#E_refl = M[1,0] * E_in * 1/M[0,0]
-
-#which can simplify to 
-#eq.3:  R = E_refl/E_in = M[0,0]/M[1,0]
-
-#This is our reflectivity.
-
-
-#we will assume a constant material for base and middle layers of FPN, namely SiO and Al.
-#variable k is defined as the wave number, or spacial frequency.
-
-#for a P(propogation) matrix the resulting terms are:
-#P_n[0,0] = exp(j*k_1*L_1)
-#P_n[1,1] = exp(-j*k_1*L_1)
-
-#for a D_nm(transmission) matrix applying fresnels equations, the terms are:
-
-
-
-#the Matrix M is formulated by multiplying all of the matrices that describe the interactions through mediums and interfaces.
-
-#M[] = D01[] * P1[] * D12[] * P2[] * D23[] * P3[]
