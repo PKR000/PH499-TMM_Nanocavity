@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
 import tmm
-import tmm.examples
 import matplotlib.pyplot as plt
 
 
@@ -29,8 +28,8 @@ print(Al_data)
 #main function
 def Calculate():
     inf = "inf"
-    d_top = 35 #nm, top layer thickness
-    d_mid = 125 #nm, Middle layer
+    d_top = 40 #nm, top layer thickness
+    d_mid = 150 #nm, Middle layer
 
     #index of refraction of material
     #interpolates data into continuous function.
@@ -43,7 +42,7 @@ def Calculate():
     material_nk_fn_mid = interp1d((material_nk_mid[:,0]*1000),
                               material_nk_mid[:,1] + material_nk_mid[:,2]*1j, kind='quadratic')
 
-    material_nk_bot = SiO2_data    #test array 3
+    material_nk_bot = Al_data    #test array 3
     material_nk_fn_bot = interp1d((material_nk_bot[:,0]*1000),
                               material_nk_bot[:,1] + material_nk_bot[:,2]*1j, kind='quadratic')
 
