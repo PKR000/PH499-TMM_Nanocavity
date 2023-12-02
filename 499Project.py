@@ -5,35 +5,92 @@ import pandas as pd
 from scipy.interpolate import interp1d
 import tmm
 import matplotlib.pyplot as plt
+import csv
+import os
+
+
+def read_csv(file_path):  #Function to read a csv file in and convert it to a numpy array    
+    data = pd.read_csv(file_path)
+    data = data.to_numpy(float)
+    return data
 
 
 #basic read-in function to grab material properties
 #the CSV files have the form lambda(.001nm), N, iK
 try:
-    SiO2_data = pd.read_csv("SiO2 for sensitivity.csv")
-    Ag_data = pd.read_csv("Ag for sensitivity.csv")
-    Al_data = pd.read_csv("Al for sensitivity.csv")
+    SiO2_data = read_csv("SiO2 for sensitivity.csv")
+    Ag_data = read_csv("Ag for sensitivity.csv")
+    Al_data = read_csv("Al for sensitivity.csv")
 except FileNotFoundError:
     print("File not found.")
 
-#converting pandas DataFrame to numpy array of floats
-SiO2_data = SiO2_data.to_numpy(float)
-Ag_data = Ag_data.to_numpy(float)
-Al_data = Al_data.to_numpy(float)
-print(SiO2_data)  #testing to check data, can remove later
-print(Ag_data)
-print(Al_data)
 
+def test_plot(file_path):
+    data = read_csv(file_path)
+    
+    plt.plot(data)
+    plt.imshow(data, cmap='viridis',origin='lower')
+    plt.colorbar() 
+
+    plt.xlabel('k value index')
+    plt.ylabel('n value index')
+    plt.show()
+
+    
 
 #main function
 def Calculate():
     inf = "inf"
-    d_top = 40 #nm, top layer thickness
-    d_mid = 150 #nm, Middle layer
+    d_top = 30 #nm, top layer thickness
+    d_mid = 80 #nm, Middle layer
 
     #index of refraction of material
     #interpolates data into continuous function.
+    material_nk_top = Ag_data    
+    material_nk_fn_top = interp1d((material_nk_top[:,0]*1000), material_nk_top[:,1] + material_nk_top[:,2]*1j, kind='quadratic')
 
+    material_nk_mid = SiO2_data    
+    material_nk_fn_mid = interp1d((material_nk_mid[:,0]*1000), material_nk_mid[:,1] + material_nk_mid[:,2]*1j, kind='quadratic')
+
+    material_nk_bot = Ag_data    
+    material_nk_fn_bot = interp1d((material_nk_bot[:,0]*1000), material_nk_bot[:,1] + material_nk_bot[:,2]*1j, kind='quadratic')
+
+    idx=1
+    while idx < 82:
+        with open(f'{idx}.csv',mode='w',newline='') as file:
+            writer = csv.writer(file)
+            
+            wavelength = 400+((idx-1)/80)*400
+            R_matrix = np.zeros((791,791))
+
+            n = .1
+            x = 0
+
+            while n <= 8:
+                k = .1
+                y = 0
+
+                while k <= 8:
+                    n_list = (1, n+(k*1j), material_nk_fn_mid(wavelength), material_nk_fn_bot(wavelength))
+                    d_list = (inf, d_top, d_mid, inf)
+                    R = tmm.coh_tmm('s', n_list, d_list,0,wavelength)['R']
+                    R_matrix[x,y] = R
+                    k+=.01
+                    y+=1
+
+                n+=.01
+                x+=1
+            
+            writer.writerows(R_matrix)
+        idx+=1
+    
+Calculate()
+
+
+
+'''
+    #index of refraction of material
+    #interpolates data into continuous function.
     material_nk_top = Ag_data    #test array 1
     material_nk_fn_top = interp1d((material_nk_top[:,0]*1000),
                               material_nk_top[:,1] + material_nk_top[:,2]*1j, kind='quadratic')
@@ -42,7 +99,7 @@ def Calculate():
     material_nk_fn_mid = interp1d((material_nk_mid[:,0]*1000),
                               material_nk_mid[:,1] + material_nk_mid[:,2]*1j, kind='quadratic')
 
-    material_nk_bot = Al_data    #test array 3
+    material_nk_bot = Ag_data    #test array 3
     material_nk_fn_bot = interp1d((material_nk_bot[:,0]*1000),
                               material_nk_bot[:,1] + material_nk_bot[:,2]*1j, kind='quadratic')
 
@@ -55,12 +112,13 @@ def Calculate():
         n_list = [1,material_nk_fn_top(lambda_vac), material_nk_fn_mid(lambda_vac), material_nk_fn_bot(lambda_vac)]
         T_list.append(tmm.coh_tmm('s', n_list, d_list, 0, lambda_vac)['R'])
     
+
     plt.figure()
     plt.plot(lambda_list, T_list)
     plt.xlabel('Wavelength (nm)')
     plt.ylabel('Fraction of power reflected')
-    plt.title('Reflectivity at normal incidence')
-    plt.show()
+    plt.title('Reflectivity at normal incidence \n Ag (30nm), Si02 (140nm), Ag')
+    plt.show()'''
 
-Calculate()
+
 
