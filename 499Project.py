@@ -36,7 +36,6 @@ def test_plot(file_path):
     plt.ylabel('n value index')
     plt.show()
 
-    
 
 #main function
 def Calculate():
@@ -84,11 +83,15 @@ def Calculate():
             writer.writerows(R_matrix)
         idx+=1
     
-Calculate()
 
+def graph_reflectivity():
+    inf = "inf"
+    d_top = 30 #nm, top layer thickness
+    d_mid = 110 #nm, Middle layer
+    d_mid2 = 125
+    d_mid3 = 140
+    d_mid4 = 220
 
-
-'''
     #index of refraction of material
     #interpolates data into continuous function.
     material_nk_top = Ag_data    #test array 1
@@ -105,20 +108,33 @@ Calculate()
 
     #d_list is thickness of materials
     d_list = [inf,d_top, d_mid, inf] #in nm, top and bottom must be inf
+    d_list2 = [inf,d_top, d_mid2, inf]
+    d_list3 = [inf,d_top, d_mid3, inf]
+    d_list4 = [inf,d_top, d_mid4, inf]
     lambda_list = np.linspace(400, 800, 400) #in nm, this returns array of z evenly spaced numbers from x to y.
     T_list = []
-    
+    T_list2 = []
+    T_list3 = []
+    T_list4 = []
     for lambda_vac in lambda_list: #for each wavelength, solve material function and add to an N list
         n_list = [1,material_nk_fn_top(lambda_vac), material_nk_fn_mid(lambda_vac), material_nk_fn_bot(lambda_vac)]
         T_list.append(tmm.coh_tmm('s', n_list, d_list, 0, lambda_vac)['R'])
+        T_list2.append(tmm.coh_tmm('s', n_list, d_list2, 0, lambda_vac)['R'])
+        T_list3.append(tmm.coh_tmm('s', n_list, d_list3, 0, lambda_vac)['R'])
+        T_list4.append(tmm.coh_tmm('s', n_list, d_list4, 0, lambda_vac)['R'])
+    
+    plt.figure()
+    plt.plot(lambda_list, T_list, label='110nm')
+    plt.plot(lambda_list, T_list2, label='125nm')
+    plt.plot(lambda_list, T_list3, label='140nm')
+   
     
 
-    plt.figure()
-    plt.plot(lambda_list, T_list)
     plt.xlabel('Wavelength (nm)')
     plt.ylabel('Fraction of power reflected')
-    plt.title('Reflectivity at normal incidence \n Ag (30nm), Si02 (140nm), Ag')
-    plt.show()'''
+    plt.title('Reflectivity at normal incidence \n Ag, Si02, Ag')
+    plt.legend()
+    plt.show()
 
-
-
+graph_reflectivity()
+#Calculate()
